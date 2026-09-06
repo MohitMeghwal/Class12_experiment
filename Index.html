@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>गैलवेनोमीटर को वोल्टमीटर में बदलना - Virtual Lab Simulator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans Devanagari) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .workbench-bg {
+            background: radial-gradient(circle at center, #3a2216 0%, #1e0d07 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.85);
+        }
+        .needle-transition {
+            transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .interactive-element {
+            cursor: pointer;
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+        .interactive-element:hover {
+            filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Mobile Volume Style Slider */
+        .volume-slider-track {
+            background: #1e293b;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
+        }
+        input[type=range].volume-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range].volume-slider:focus {
+            outline: none;
+        }
+        input[type=range].volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #f59e0b;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.8), inset 0 2px 2px rgba(255,255,255,0.5);
+            margin-top: -10px;
+            border: 2px solid #ffffff;
+        }
+        input[type=range].volume-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none">
+
+    <!-- Header Section -->
+    <header class="glass-panel sticky top-0 z-40 px-6 py-3 border-b border-slate-700/50 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+                    <i class="fa-solid fa-bolt text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-amber-400 tracking-wide">
+                        गैलवेनोमीटर को वोल्टमीटर में बदलना
+                    </h1>
+                    <p class="text-xs text-slate-400">
+                        कक्षा 12 भौतिक विज्ञान आभासी प्रयोग (Conversion of Galvanometer to Voltmeter)
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3 text-sm">
+                <button onclick="toggleKey()" id="btn-toggle-key-head" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg shadow-md transition flex items-center gap-2">
+                    <i class="fa-solid fa-power-off"></i> <span id="key-head-text">कुंजी: बंद (OFF)</span>
+                </button>
+                <button onclick="resetLab()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium rounded-lg border border-slate-600 transition flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> रिसेट
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+        
+        <!-- Left Side: 2D Interactive Lab Workbench -->
+        <section class="lg:col-span-8 flex flex-col">
+            <div class="glass-panel rounded-2xl overflow-hidden border border-amber-900/40 shadow-2xl flex-grow flex flex-col">
+                <!-- Workbench Header -->
+                <div class="bg-slate-900/80 px-4 py-2.5 border-b border-slate-700/60 flex justify-between items-center">
+                    <span class="text-xs font-semibold text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-vial"></i> 2D भौतिकी प्रयोगशाला टेबल (Interactive Lab Workbench)
+                    </span>
+                    <span class="text-xs text-slate-400 italic">
+                        उपकरण की जानकारी के लिए उस पर क्लिक करें
+                    </span>
+                </div>
+
+                <!-- Workbench Table Canvas Surface -->
+                <div class="workbench-bg relative flex-grow min-h-[480px] p-4 flex items-center justify-center overflow-hidden">
+                    
+                    <!-- SVG Interactive Canvas -->
+                    <svg id="workbench-svg" viewBox="0 0 950 560" class="w-full h-full max-h-[550px] drop-shadow-2xl" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                                <feDropShadow dx="3" dy="5" stdDeviation="4" flood-color="#000" flood-opacity="0.7"/>
+                            </filter>
+                            <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#cbd5e1" />
+                                <stop offset="50%" stop-color="#64748b" />
+                                <stop offset="100%" stop-color="#334155" />
+                            </linearGradient>
+                            <linearGradient id="brass-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#fef08a" />
+                                <stop offset="50%" stop-color="#ca8a04" />
+                                <stop offset="100%" stop-color="#854d0e" />
+                            </linearGradient>
+                            <linearGradient id="rheo-wire" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#475569"/>
+                                <stop offset="20%" stop-color="#94a3b8"/>
+                                <stop offset="40%" stop-color="#475569"/>
+                                <stop offset="60%" stop-color="#94a3b8"/>
+                                <stop offset="80%" stop-color="#475569"/>
+                                <stop offset="100%" stop-color="#94a3b8"/>
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Connecting Wires Group -->
+                        <g id="connecting-wires" stroke-linecap="round" fill="none">
+                            <!-- Battery(-) [75,120] to Key Left [705, 95] -->
+                            <path d="M 75 120 C 75 40, 705 40, 705 95" stroke="#0f172a" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 75 120 C 75 40, 705 40, 705 95" stroke="#1e293b" stroke-width="3"/>
+
+                            <!-- Key Right [785, 95] to Rheostat Right Bottom [635, 215] -->
+                            <path d="M 785 95 C 830 95, 800 215, 635 215" stroke="#0f172a" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 785 95 C 830 95, 800 215, 635 215" stroke="#1e293b" stroke-width="3"/>
+
+                            <!-- Battery(+) [165,120] to Rheostat Left Bottom [315, 215] -->
+                            <path d="M 165 120 C 165 200, 240 215, 315 215" stroke="#b91c1c" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 165 120 C 165 200, 240 215, 315 215" stroke="#ef4444" stroke-width="3"/>
+
+                            <!-- Rheostat Left Bottom [315, 215] to Galvanometer(+) [130, 435] -->
+                            <path d="M 315 215 C 240 250, 130 330, 130 435" stroke="#b91c1c" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 315 215 C 240 250, 130 330, 130 435" stroke="#ef4444" stroke-width="3"/>
+
+                            <!-- Rheostat Left Bottom [315, 215] to Voltmeter(+) [410, 435] -->
+                            <path d="M 315 215 C 315 320, 410 350, 410 435" stroke="#ef4444" stroke-width="3" stroke-dasharray="6,3" filter="url(#shadow)"/>
+
+                            <!-- Galvanometer(-) [230, 435] to Resistance Box Left [680, 425] -->
+                            <path d="M 230 435 C 230 520, 680 520, 680 425" stroke="#0f172a" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 230 435 C 230 520, 680 520, 680 425" stroke="#334155" stroke-width="3"/>
+
+                            <!-- Resistance Box Right [830, 425] to Voltmeter(-) [510, 435] -->
+                            <path d="M 830 425 C 830 510, 510 510, 510 435" stroke="#0f172a" stroke-width="5" filter="url(#shadow)"/>
+                            <path d="M 830 425 C 830 510, 510 510, 510 435" stroke="#334155" stroke-width="3"/>
+
+                            <!-- Dynamic Rheostat Wiper to Voltmeter(-) Wire -->
+                            <path id="wiper-wire" d="M 315 130 C 315 280, 510 320, 510 435" stroke="#0f172a" stroke-width="4" filter="url(#shadow)"/>
+                            <path id="wiper-wire-inner" d="M 315 130 C 315 280, 510 320, 510 435" stroke="#475569" stroke-width="2"/>
+                        </g>
+
+                        <!-- 1. BATTERY ELIMINATOR -->
+                        <g id="eq-battery" class="interactive-element" onclick="showInfo('battery')" transform="translate(40, 60)" filter="url(#shadow)">
+                            <rect x="0" y="0" width="160" height="110" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+                            <rect x="10" y="10" width="140" height="90" rx="4" fill="#0f172a"/>
+                            <text x="80" y="32" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">बैटरी एलिमिनेटर (3V)</text>
+                            
+                            <circle id="battery-led" cx="30" cy="55" r="5" fill="#ef4444"/>
+                            <text x="42" y="58" fill="#64748b" font-size="9">Power</text>
+                            
+                            <rect x="85" y="45" width="50" height="22" rx="3" fill="#0284c7" fill-opacity="0.2" stroke="#0369a1"/>
+                            <text x="110" y="60" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">3.0 V</text>
+
+                            <!-- Black (-) Terminal -->
+                            <circle cx="35" cy="85" r="10" fill="#334155" stroke="#000" stroke-width="2"/>
+                            <circle cx="35" cy="85" r="4" fill="#000"/>
+                            <text x="35" y="102" fill="#94a3b8" font-size="10" font-weight="bold" text-anchor="middle">-</text>
+
+                            <!-- Red (+) Terminal -->
+                            <circle cx="125" cy="85" r="10" fill="#dc2626" stroke="#000" stroke-width="2"/>
+                            <circle cx="125" cy="85" r="4" fill="#7f1d1d"/>
+                            <text x="125" y="102" fill="#fca5a5" font-size="10" font-weight="bold" text-anchor="middle">+</text>
+                        </g>
+
+                        <!-- 2. PLUG KEY / SWITCH -->
+                        <g id="eq-key" class="interactive-element" onclick="toggleKey(); event.stopPropagation();" transform="translate(670, 60)" filter="url(#shadow)">
+                            <rect x="0" y="0" width="150" height="70" rx="6" fill="#451a03" stroke="#78350f" stroke-width="2"/>
+                            <rect x="25" y="15" width="40" height="40" rx="2" fill="url(#brass-grad)"/>
+                            <rect x="85" y="15" width="40" height="40" rx="2" fill="url(#brass-grad)"/>
+                            
+                            <circle cx="35" cy="35" r="8" fill="#1e293b"/>
+                            <circle cx="115" cy="35" r="8" fill="#1e293b"/>
+
+                            <g id="plug-pin" transform="translate(75, 35)">
+                                <circle cx="0" cy="0" r="12" fill="#1e293b" stroke="#000" stroke-width="2"/>
+                                <circle cx="0" cy="0" r="6" fill="url(#brass-grad)"/>
+                            </g>
+                            <text x="75" y="64" fill="#fde68a" font-size="10" font-weight="bold" text-anchor="middle" id="key-status-label">कुंजी (OFF)</text>
+                        </g>
+
+                        <!-- 3. RHEOSTAT -->
+                        <g id="eq-rheostat" class="interactive-element" onclick="showInfo('rheostat')" transform="translate(280, 110)" filter="url(#shadow)">
+                            <rect x="10" y="80" width="25" height="45" fill="url(#metal-grad)" rx="2"/>
+                            <rect x="345" y="80" width="25" height="45" fill="url(#metal-grad)" rx="2"/>
+
+                            <rect x="30" y="85" width="320" height="30" rx="15" fill="#f8fafc" stroke="#cbd5e1"/>
+                            <rect x="35" y="86" width="310" height="28" fill="url(#rheo-wire)"/>
+
+                            <rect x="20" y="20" width="340" height="12" rx="3" fill="url(#metal-grad)"/>
+
+                            <g id="rheostat-wiper" transform="translate(35, 10)">
+                                <rect x="-15" y="0" width="30" height="30" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+                                <polygon points="0,30 -8,45 8,45" fill="#f59e0b"/>
+                                <circle cx="0" cy="15" r="5" fill="#f59e0b"/>
+                            </g>
+
+                            <circle cx="35" cy="105" r="7" fill="url(#brass-grad)"/>
+                            <circle cx="355" cy="105" r="7" fill="url(#brass-grad)"/>
+                            <text x="190" y="122" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">परिवर्ती प्रतिरोध / रिओस्टैट (Rheostat)</text>
+                        </g>
+
+                        <!-- 4. GALVANOMETER (Exactly like Image 2: Center Zero Scale) -->
+                        <g id="eq-galvanometer" class="interactive-element" onclick="showInfo('galvanometer')" transform="translate(50, 290)" filter="url(#shadow)">
+                            <!-- Slanted Base/Case like Image 2 -->
+                            <polygon points="0,30 180,30 190,170 -10,170" fill="#334155" stroke="#1e293b" stroke-width="2"/>
+                            <!-- White Dial Face -->
+                            <rect x="10" y="15" width="160" height="110" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                            
+                            <!-- Scale Arc -->
+                            <path d="M 30 85 A 60 60 0 0 1 150 85" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+                            
+                            <!-- Scale Markings (Center 0, Left 10 20 30, Right 10 20 30) -->
+                            <!-- Center 0 -->
+                            <line x1="90" y1="25" x2="90" y2="33" stroke="#000" stroke-width="2"/>
+                            <text x="90" y="44" fill="#000" font-size="10" font-weight="bold" text-anchor="middle">0</text>
+
+                            <!-- Right 10, 20, 30 -->
+                            <line x1="110" y1="28" x2="108" y2="36" stroke="#000" stroke-width="1.5"/>
+                            <text x="114" y="47" fill="#000" font-size="8" text-anchor="middle">10</text>
+                            
+                            <line x1="130" y1="38" x2="126" y2="45" stroke="#000" stroke-width="1.5"/>
+                            <text x="136" y="55" fill="#000" font-size="8" text-anchor="middle">20</text>
+
+                            <line x1="146" y1="56" x2="139" y2="61" stroke="#000" stroke-width="2"/>
+                            <text x="152" y="70" fill="#000" font-size="9" font-weight="bold" text-anchor="middle">30</text>
+
+                            <!-- Left 10, 20, 30 -->
+                            <line x1="70" y1="28" x2="72" y2="36" stroke="#000" stroke-width="1.5"/>
+                            <text x="66" y="47" fill="#000" font-size="8" text-anchor="middle">10</text>
+
+                            <line x1="50" y1="38" x2="54" y2="45" stroke="#000" stroke-width="1.5"/>
+                            <text x="44" y="55" fill="#000" font-size="8" text-anchor="middle">20</text>
+
+                            <line x1="34" y1="56" x2="41" y2="61" stroke="#000" stroke-width="2"/>
+                            <text x="28" y="70" fill="#000" font-size="9" font-weight="bold" text-anchor="middle">30</text>
+
+                            <!-- Label -->
+                            <text x="90" y="75" fill="#0f172a" font-size="12" font-weight="bold" text-anchor="middle">G</text>
+                            <text x="90" y="92" fill="#475569" font-size="8" font-weight="bold" text-anchor="middle">GALVANOMETER</text>
+
+                            <!-- Red Needle (Pivoted at Center 90,95) -->
+                            <g transform="translate(90, 95)">
+                                <!-- Center 0 is vertical (rotate 0deg). +30 div is rotate(+54deg) -->
+                                <line id="galvo-needle" class="needle-transition" x1="0" y1="0" x2="0" y2="-65" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/>
+                                <circle cx="0" cy="0" r="4.5" fill="#0f172a"/>
+                            </g>
+
+                            <!-- Terminals on Base Plate -->
+                            <circle cx="70" cy="145" r="8" fill="#dc2626" stroke="#000" stroke-width="1.5"/>
+                            <text x="70" y="162" fill="#cbd5e1" font-size="9" text-anchor="middle">+</text>
+
+                            <circle cx="110" cy="145" r="8" fill="#1e293b" stroke="#000" stroke-width="1.5"/>
+                            <text x="110" y="162" fill="#cbd5e1" font-size="9" text-anchor="middle">-</text>
+                        </g>
+
+                        <!-- 5. STANDARD VOLTMETER (Exactly like Image 2: 0 to 3V Scale) -->
+                        <g id="eq-voltmeter" class="interactive-element" onclick="showInfo('voltmeter')" transform="translate(330, 290)" filter="url(#shadow)">
+                            <!-- Slanted Base/Case like Image 2 -->
+                            <polygon points="0,30 180,30 190,170 -10,170" fill="#334155" stroke="#1e293b" stroke-width="2"/>
+                            <!-- White Dial Face -->
+                            <rect x="10" y="15" width="160" height="110" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+                            
+                            <!-- Scale Arc -->
+                            <path d="M 30 85 A 60 60 0 0 1 150 85" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+                            
+                            <!-- Scale Markings (0 to 3V) -->
+                            <!-- 0V (Left) -->
+                            <line x1="34" y1="56" x2="41" y2="61" stroke="#000" stroke-width="2"/>
+                            <text x="28" y="70" fill="#000" font-size="9" font-weight="bold" text-anchor="middle">0</text>
+
+                            <!-- 0.5V -->
+                            <line x1="50" y1="38" x2="54" y2="45" stroke="#000" stroke-width="1"/>
+                            <text x="44" y="55" fill="#000" font-size="7" text-anchor="middle">0.5</text>
+
+                            <!-- 1V -->
+                            <line x1="70" y1="28" x2="72" y2="36" stroke="#000" stroke-width="1.5"/>
+                            <text x="66" y="47" fill="#000" font-size="8" text-anchor="middle">1</text>
+
+                            <!-- 1.5V (Center Top) -->
+                            <line x1="90" y1="25" x2="90" y2="33" stroke="#000" stroke-width="2"/>
+                            <text x="90" y="44" fill="#000" font-size="9" font-weight="bold" text-anchor="middle">1.5</text>
+
+                            <!-- 2V -->
+                            <line x1="110" y1="28" x2="108" y2="36" stroke="#000" stroke-width="1.5"/>
+                            <text x="114" y="47" fill="#000" font-size="8" text-anchor="middle">2</text>
+
+                            <!-- 2.5V -->
+                            <line x1="130" y1="38" x2="126" y2="45" stroke="#000" stroke-width="1"/>
+                            <text x="136" y="55" fill="#000" font-size="7" text-anchor="middle">2.5</text>
+
+                            <!-- 3V (Right) -->
+                            <line x1="146" y1="56" x2="139" y2="61" stroke="#000" stroke-width="2"/>
+                            <text x="152" y="70" fill="#000" font-size="9" font-weight="bold" text-anchor="middle">3</text>
+
+                            <!-- Label -->
+                            <text x="90" y="75" fill="#0f172a" font-size="12" font-weight="bold" text-anchor="middle">V</text>
+                            <text x="90" y="92" fill="#475569" font-size="8" font-weight="bold" text-anchor="middle">VOLTMETER (0-3V)</text>
+
+                            <!-- Red Needle (Pivoted at 90,95) -->
+                            <g transform="translate(90, 95)">
+                                <!-- 0V is rotate(-54deg), 3V is rotate(+54deg) -->
+                                <line id="volt-needle" class="needle-transition" x1="0" y1="0" x2="0" y2="-65" stroke="#dc2626" stroke-width="2" stroke-linecap="round" transform="rotate(-54)"/>
+                                <circle cx="0" cy="0" r="4.5" fill="#0f172a"/>
+                            </g>
+
+                            <!-- Terminals on Base Plate -->
+                            <circle cx="70" cy="145" r="8" fill="#dc2626" stroke="#000" stroke-width="1.5"/>
+                            <text x="70" y="162" fill="#cbd5e1" font-size="9" text-anchor="middle">+</text>
+
+                            <circle cx="110" cy="145" r="8" fill="#1e293b" stroke="#000" stroke-width="1.5"/>
+                            <text x="110" y="162" fill="#cbd5e1" font-size="9" text-anchor="middle">-</text>
+                        </g>
+
+                        <!-- 6. HIGH RESISTANCE BOX -->
+                        <g id="eq-resistance-box" class="interactive-element" onclick="showInfo('resistanceBox')" transform="translate(610, 310)" filter="url(#shadow)">
+                            <rect x="0" y="0" width="230" height="150" rx="8" fill="#451a03" stroke="#78350f" stroke-width="3"/>
+                            <rect x="10" y="10" width="210" height="130" rx="4" fill="#291305"/>
+
+                            <text x="115" y="32" fill="#fde68a" font-size="12" font-weight="bold" text-anchor="middle">उच्च प्रतिरोध बॉक्स (RB)</text>
+                            
+                            <g transform="translate(25, 45)">
+                                <rect x="0" y="0" width="30" height="20" fill="url(#brass-grad)" rx="2"/>
+                                <circle cx="15" cy="10" r="4" fill="#000"/>
+                                <rect x="40" y="0" width="30" height="20" fill="url(#brass-grad)" rx="2"/>
+                                <circle cx="55" cy="10" r="4" fill="#000"/>
+                                <rect x="80" y="0" width="30" height="20" fill="url(#brass-grad)" rx="2"/>
+                                <circle cx="95" cy="10" r="4" fill="#000"/>
+                                <rect x="120" y="0" width="30" height="20" fill="url(#brass-grad)" rx="2"/>
+                                <circle cx="135" cy="10" r="4" fill="#000"/>
+
+                                <rect x="120" y="30" width="50" height="22" rx="4" fill="#f59e0b" fill-opacity="0.2" stroke="#f59e0b"/>
+                                <text x="145" y="45" fill="#fbbf24" font-size="11" font-weight="bold" text-anchor="middle">R = 4900 Ω</text>
+                            </g>
+
+                            <circle cx="60" cy="115" r="9" fill="url(#brass-grad)" stroke="#000" stroke-width="1.5"/>
+                            <circle cx="210" cy="115" r="9" fill="url(#brass-grad)" stroke="#000" stroke-width="1.5"/>
+                            <text x="135" y="132" fill="#a16207" font-size="10" text-anchor="middle">Converted Voltmeter Component</text>
+                        </g>
+
+                        <!-- Converted Voltmeter Dashed Boundary -->
+                        <rect x="35" y="270" width="820" height="225" rx="12" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,6" opacity="0.5"/>
+                        <text x="840" y="288" fill="#fbbf24" font-size="11" font-weight="bold" text-anchor="end">रूपांतरित वोल्टमीटर सीमा (Converted Voltmeter Boundary)</text>
+                    </svg>
+
+                </div>
+
+                <!-- Mobile Volume-Style Slider Control for Rheostat -->
+                <div class="bg-slate-900/95 px-6 py-4 border-t border-slate-700/60 flex flex-col md:flex-row items-center gap-4 justify-between">
+                    <div class="flex items-center space-x-3 w-full md:w-3/4">
+                        <!-- Mobile Volume Icon Style -->
+                        <div class="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30 flex items-center justify-center">
+                            <i class="fa-solid fa-sliders text-lg"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="rheostat-slider" class="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                                    परिवर्ती प्रतिरोध (Rheostat Control - Mobile Volume Style)
+                                </label>
+                                <span id="rheostat-val" class="text-amber-400 font-mono font-bold text-sm bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">0%</span>
+                            </div>
+                            <!-- Mobile Capsule Slider -->
+                            <div class="relative flex items-center">
+                                <input type="range" id="rheostat-slider" min="0" max="100" value="0" oninput="updateCircuit()" class="volume-slider">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2 w-full md:w-auto justify-end">
+                        <button onclick="adjustRheostat(-5)" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-xs font-bold transition active:scale-95">
+                            <i class="fa-solid fa-minus"></i> 5%
+                        </button>
+                        <button onclick="adjustRheostat(5)" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-xs font-bold transition active:scale-95">
+                            <i class="fa-solid fa-plus"></i> 5%
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Side: Circuit Diagram, Live Formulas & Action Buttons -->
+        <section class="lg:col-span-4 flex flex-col gap-5">
+            
+            <!-- 1. Circuit Diagram Card -->
+            <div class="glass-panel rounded-2xl p-4 border border-slate-700/60 shadow-xl">
+                <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-diagram-project"></i> परिपथ आरेख (Circuit Diagram)
+                </h2>
+                
+                <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex justify-center items-center">
+                    <svg viewBox="0 0 320 220" class="w-full h-auto max-h-[190px]">
+                        <line x1="40" y1="30" x2="130" y2="30" stroke="#94a3b8" stroke-width="2"/>
+                        <line x1="130" y1="20" x2="130" y2="40" stroke="#ef4444" stroke-width="3"/>
+                        <line x1="136" y1="25" x2="136" y2="35" stroke="#cbd5e1" stroke-width="1.5"/>
+                        <line x1="142" y1="20" x2="142" y2="40" stroke="#cbd5e1" stroke-width="3"/>
+                        <line x1="148" y1="25" x2="148" y2="35" stroke="#cbd5e1" stroke-width="1.5"/>
+                        <text x="130" y="15" fill="#f8fafc" font-size="10" text-anchor="middle">Battery (E)</text>
+
+                        <line x1="148" y1="30" x2="190" y2="30" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="200" cy="30" r="8" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+                        <circle cx="200" cy="30" r="2.5" fill="#ef4444" id="diagram-key-dot"/>
+                        <text x="200" y="15" fill="#f8fafc" font-size="10" text-anchor="middle">Key (K)</text>
+
+                        <line x1="210" y1="30" x2="280" y2="30" stroke="#94a3b8" stroke-width="2"/>
+                        <line x1="280" y1="30" x2="280" y2="80" stroke="#94a3b8" stroke-width="2"/>
+
+                        <path d="M 210 80 L 220 73 L 230 87 L 240 73 L 250 87 L 260 73 L 270 87 L 280 80" fill="none" stroke="#f59e0b" stroke-width="2"/>
+                        <text x="245" y="98" fill="#f59e0b" font-size="10" font-weight="bold" text-anchor="middle">Rheostat</text>
+
+                        <path d="M 245 80 L 245 120" stroke="#38bdf8" stroke-width="2"/>
+                        <polyline points="240,88 245,78 250,88" fill="#38bdf8"/>
+
+                        <line x1="40" y1="30" x2="40" y2="180" stroke="#94a3b8" stroke-width="2"/>
+
+                        <line x1="40" y1="120" x2="120" y2="120" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="135" cy="120" r="12" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+                        <text x="135" y="124" fill="#10b981" font-size="11" font-weight="bold" text-anchor="middle">V</text>
+                        <text x="135" y="103" fill="#cbd5e1" font-size="8" text-anchor="middle">Standard Voltmeter</text>
+                        <line x1="150" y1="120" x2="245" y2="120" stroke="#94a3b8" stroke-width="2"/>
+
+                        <rect x="60" y="145" width="170" height="50" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,4"/>
+                        <text x="145" y="208" fill="#fbbf24" font-size="9" text-anchor="middle">Converted Voltmeter</text>
+
+                        <line x1="40" y1="170" x2="80" y2="170" stroke="#94a3b8" stroke-width="2"/>
+                        <circle cx="95" cy="170" r="11" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                        <text x="95" y="174" fill="#38bdf8" font-size="10" font-weight="bold" text-anchor="middle">G</text>
+                        <line x1="110" y1="170" x2="135" y2="170" stroke="#94a3b8" stroke-width="2"/>
+
+                        <rect x="135" y="160" width="40" height="20" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+                        <text x="155" y="174" fill="#fde68a" font-size="9" font-weight="bold" text-anchor="middle">RB</text>
+                        <line x1="175" y1="170" x2="245" y2="170" stroke="#94a3b8" stroke-width="2"/>
+
+                        <line x1="245" y1="120" x2="245" y2="170" stroke="#94a3b8" stroke-width="2"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 2. Live Calculations Card -->
+            <div class="glass-panel rounded-2xl p-4 border border-slate-700/60 shadow-xl space-y-3">
+                <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> गणना एवं मान (Live Readings & Formulas)
+                </h2>
+
+                <div class="grid grid-cols-2 gap-2.5 text-xs">
+                    <div class="p-2 bg-slate-900/60 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block">प्रतिरोध ($G$):</span>
+                        <span class="font-bold text-slate-200">100 Ω</span>
+                    </div>
+                    <div class="p-2 bg-slate-900/60 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block">दक्षता गुणांक ($k$):</span>
+                        <span class="font-bold text-slate-200">20 µA/div</span>
+                    </div>
+                    <div class="p-2 bg-slate-900/60 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block">कुल खाने ($n$):</span>
+                        <span class="font-bold text-slate-200">30 Divisions</span>
+                    </div>
+                    <div class="p-2 bg-slate-900/60 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block">श्रेणी प्रतिरोध ($R$):</span>
+                        <span class="font-bold text-amber-400">4900 Ω</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20 space-y-2 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-amber-200/80">अल्पतमांक (LC = V / n):</span>
+                        <span class="font-mono font-bold text-amber-300">0.1 V/div</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-amber-500/20 pt-1.5">
+                        <span class="text-amber-200/80">गैलवेनोमीटर विक्षेप ($\theta$):</span>
+                        <span id="live-theta" class="font-mono font-bold text-cyan-300 text-sm">0 div</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-amber-200/80">रूपांतरित वोल्टता ($V_1 = \theta \times \text{LC}$):</span>
+                        <span id="live-v1" class="font-mono font-bold text-emerald-400 text-sm">0.00 V</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-amber-200/80">मानक वोल्टमीटर ($V$):</span>
+                        <span id="live-v" class="font-mono font-bold text-emerald-400 text-sm">0.00 V</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-amber-500/20 pt-1.5">
+                        <span class="text-amber-200/80">त्रुटि (Error = $V - V_1$):</span>
+                        <span id="live-error" class="font-mono font-bold text-amber-400 text-sm">0.00 V</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Action Control Buttons -->
+            <div class="flex flex-col gap-3 mt-auto">
+                <button onclick="addObservation()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-95">
+                    <i class="fa-solid fa-plus-circle text-lg"></i> पाठ्यांक दर्ज करें (Add Reading)
+                </button>
+                <button onclick="openTableModal()" class="w-full py-3 bg-cyan-700 hover:bg-cyan-600 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-95">
+                    <i class="fa-solid fa-table text-lg"></i> प्रेक्षण सारणी देखें (View Observation Table)
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Observation Table -->
+    <div id="modal-table" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-3xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-table-list"></i> प्रेक्षण सारणी (Observation Table)
+                </h3>
+                <button onclick="closeTableModal()" class="text-slate-400 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-grow">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-700 bg-slate-800/80 text-amber-300">
+                            <th class="p-3">क्र.सं. (S.No.)</th>
+                            <th class="p-3">मानक वोल्टमीटर (V) [Volt]</th>
+                            <th class="p-3">गैलवेनोमीटर विक्षेप (θ) [Div]</th>
+                            <th class="p-3">रूपांतरित वोल्टमीटर (V₁ = θ×0.1) [Volt]</th>
+                            <th class="p-3">त्रुटि (Error = V - V₁) [Volt]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-800 text-slate-200 font-mono">
+                    </tbody>
+                </table>
+                <div id="empty-table-msg" class="text-center py-8 text-slate-500 italic">
+                    कोई पाठ्यांक दर्ज नहीं किया गया है। "पाठ्यांक दर्ज करें" बटन दबाएं।
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-900 border-t border-slate-700 flex justify-between items-center">
+                <button onclick="clearTable()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold">
+                    <i class="fa-solid fa-trash me-1"></i> सारणी साफ करें
+                </button>
+                <div class="flex space-x-3">
+                    <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-csv"></i> CSV डाउनलोड करें
+                    </button>
+                    <button onclick="closeTableModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs font-semibold">
+                        बंद करें
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Equipment Info -->
+    <div id="modal-info" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-2xl border border-amber-500/40 shadow-2xl p-6 relative">
+            <button onclick="closeInfoModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="p-3 bg-amber-500/20 text-amber-400 rounded-xl">
+                    <i class="fa-solid fa-microchip text-2xl"></i>
+                </div>
+                <h3 id="info-title" class="text-lg font-bold text-amber-300">उपकरण का नाम</h3>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+                <div>
+                    <strong class="text-amber-400 block">कार्य (Function):</strong>
+                    <p id="info-function" class="mt-0.5">---</p>
+                </div>
+                <hr class="border-slate-700">
+                <div>
+                    <strong class="text-amber-400 block">प्रयोग में भूमिका (Role in Experiment):</strong>
+                    <p id="info-role" class="mt-0.5">---</p>
+                </div>
+            </div>
+            <button onclick="closeInfoModal()" class="w-full mt-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg text-xs border border-slate-700">
+                समझ गया (Close)
+            </button>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        let isKeyOn = false;
+        let rheostatValue = 0;
+        let observations = [];
+
+        const V_max = 3.0; // Voltmeter range (0-3V)
+        const LC = 0.1;    // Least count = 0.1 V/div
+
+        const equipmentData = {
+            battery: {
+                name: "बैटरी एलिमिनेटर (Battery Eliminator)",
+                function: "यह परिपथ को स्थिर 3V की दिष्ट धारा (DC Voltage) प्रदान करता है।",
+                role: "संपूर्ण परिपथ में धारा प्रवाह बनाए रखने के लिए मुख्य ऊर्जा स्रोत का कार्य करता है।"
+            },
+            key: {
+                name: "प्लगी कुंजी (Plug Key / Switch)",
+                function: "परिपथ को चालू (ON) या बंद (OFF) करने के लिए।",
+                role: "सुरक्षा कुंजी; जब प्रयोग न किया जा रहा हो तो धारा प्रवाह रोकती है।"
+            },
+            rheostat: {
+                name: "धारा नियंत्रक / रिओस्टैट (Rheostat)",
+                function: "विभव विभाजक (Potential Divider) के रूप में परिपथ का वोल्टेज 0V से 3V तक नियंत्रित करना।",
+                role: "इसके स्लाइडर को खिसकाकर परिपथ में प्रयुक्त विभवांतर को बदला जाता है जिससे विभिन्‍न पाठ्यांक प्राप्त होते हैं।"
+            },
+            galvanometer: {
+                name: "गैलवेनोमीटर (Galvanometer)",
+                function: "सूक्ष्म विद्युत धारा की उपस्थिति एवं परिमाण को मापना।",
+                role: "इसके श्रेणीक्रम में उच्च प्रतिरोध (4900 Ω) जोड़कर इसे वोल्टमीटर में रूपांतरित किया जाता है।"
+            },
+            voltmeter: {
+                name: "मानक वोल्टमीटर (Standard Voltmeter)",
+                function: "परिपथ के सिरों का वास्तविक विभवांतर (0-3V) मापना।",
+                role: "रूपांतरित वोल्टमीटर के पाठ्यांक की शुद्धता की तुलना करने और त्रुटि (Error) ज्ञात करने के लिए मानक के रूप में प्रयुक्त होता है।"
+            },
+            resistanceBox: {
+                name: "उच्च प्रतिरोध बॉक्स (High Resistance Box - RB)",
+                function: "परिपथ में सुस्पष्ट उच्च श्रेणी प्रतिरोध (R = 4900 Ω) स्थापित करना।",
+                role: "यह धारा Ig को सीमित करता है ताकि गैलवेनोमीटर का पूर्ण स्केल विक्षेप ठीक 3V विभवांतर पर प्राप्त हो सके।"
+            }
+        };
+
+        window.onload = () => {
+            updateCircuit();
+        };
+
+        function toggleKey() {
+            isKeyOn = !isKeyOn;
+            
+            const keyText = document.getElementById("key-head-text");
+            const btnKeyHead = document.getElementById("btn-toggle-key-head");
+            const keyLabel = document.getElementById("key-status-label");
+            const plugPin = document.getElementById("plug-pin");
+            const batteryLed = document.getElementById("battery-led");
+            const keyDot = document.getElementById("diagram-key-dot");
+
+            if (isKeyOn) {
+                keyText.innerText = "कुंजी: चालू (ON)";
+                btnKeyHead.classList.remove("bg-rose-600", "hover:bg-rose-500");
+                btnKeyHead.classList.add("bg-emerald-600", "hover:bg-emerald-500");
+                keyLabel.innerText = "कुंजी (ON)";
+                keyLabel.setAttribute("fill", "#4ade80");
+                plugPin.setAttribute("transform", "translate(55, 35)");
+                batteryLed.setAttribute("fill", "#22c55e");
+                keyDot.setAttribute("fill", "#22c55e");
+                showToast("परिपथ कुंजी चालू (ON) की गई", "success");
+            } else {
+                keyText.innerText = "कुंजी: बंद (OFF)";
+                btnKeyHead.classList.remove("bg-emerald-600", "hover:bg-emerald-500");
+                btnKeyHead.classList.add("bg-rose-600", "hover:bg-rose-500");
+                keyLabel.innerText = "कुंजी (OFF)";
+                keyLabel.setAttribute("fill", "#fde68a");
+                plugPin.setAttribute("transform", "translate(75, 35)");
+                batteryLed.setAttribute("fill", "#ef4444");
+                keyDot.setAttribute("fill", "#ef4444");
+                showToast("परिपथ कुंजी बंद (OFF) की गई", "info");
+            }
+
+            updateCircuit();
+        }
+
+        function adjustRheostat(delta) {
+            const slider = document.getElementById("rheostat-slider");
+            let newVal = parseInt(slider.value) + delta;
+            if (newVal < 0) newVal = 0;
+            if (newVal > 100) newVal = 100;
+            slider.value = newVal;
+            updateCircuit();
+        }
+
+        function updateCircuit() {
+            rheostatValue = parseInt(document.getElementById("rheostat-slider").value);
+            document.getElementById("rheostat-val").innerText = rheostatValue + "%";
+
+            // Wiper X position (35 to 345)
+            const wiperX = 35 + (rheostatValue / 100) * 310;
+            document.getElementById("rheostat-wiper").setAttribute("transform", `translate(${wiperX}, 10)`);
+            
+            const wiperWirePath = `M ${wiperX} 130 C ${wiperX} 280, 510 320, 510 435`;
+            document.getElementById("wiper-wire").setAttribute("d", wiperWirePath);
+            document.getElementById("wiper-wire-inner").setAttribute("d", wiperWirePath);
+
+            let V_std = 0.0;
+            let theta = 0;
+            let V1_converted = 0.0;
+            let errorVal = 0.0;
+
+            if (isKeyOn) {
+                // Voltage supplied by potential divider
+                V_std = (rheostatValue / 100) * V_max; // 0.00 to 3.00 V
+                
+                // Galvanometer Deflection θ (0 to 30 divisions)
+                theta = Math.round(V_std / LC); 
+                if (theta > 30) theta = 30;
+
+                // Converted Voltmeter Reading V1 = θ * LC
+                V1_converted = theta * LC;
+                errorVal = V_std - V1_converted;
+            }
+
+            // Update Formula Cards
+            document.getElementById("live-theta").innerText = theta + " Div";
+            document.getElementById("live-v1").innerText = V1_converted.toFixed(2) + " V";
+            document.getElementById("live-v").innerText = V_std.toFixed(2) + " V";
+            document.getElementById("live-error").innerText = Math.abs(errorVal).toFixed(2) + " V";
+
+            // Rotate Needles precisely like Image 2
+            // Galvanometer (Center Zero): 0 div = 0deg (straight up), +30 div = +54deg (right)
+            const galvoAngle = (theta / 30) * 54;
+            
+            // Standard Voltmeter (0 to 3V): 0V = -54deg (left), 3V = +54deg (right)
+            const voltAngle = -54 + (V_std / 3.0) * 108;
+
+            document.getElementById("galvo-needle").setAttribute("transform", `rotate(${galvoAngle})`);
+            document.getElementById("volt-needle").setAttribute("transform", `rotate(${voltAngle})`);
+        }
+
+        function addObservation() {
+            if (!isKeyOn) {
+                showToast("कृपया पहले परिपथ कुंजी चालू (ON) करें!", "error");
+                return;
+            }
+
+            const V_std = parseFloat(document.getElementById("live-v").innerText);
+            const theta = parseInt(document.getElementById("live-theta").innerText);
+            const V1 = parseFloat(document.getElementById("live-v1").innerText);
+            const error = (V_std - V1).toFixed(2);
+
+            const row = {
+                sno: observations.length + 1,
+                v: V_std.toFixed(2),
+                theta: theta,
+                v1: V1.toFixed(2),
+                error: error
+            };
+
+            observations.push(row);
+            renderTable();
+            showToast("पाठ्यांक सारणी में जोड़ा गया!", "success");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("table-body");
+            const emptyMsg = document.getElementById("empty-table-msg");
+
+            if (observations.length === 0) {
+                tbody.innerHTML = "";
+                emptyMsg.classList.remove("hidden");
+                return;
+            }
+
+            emptyMsg.classList.add("hidden");
+            tbody.innerHTML = observations.map(item => `
+                <tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-3 border-b border-slate-800 text-slate-400">${item.sno}</td>
+                    <td class="p-3 border-b border-slate-800 text-emerald-400 font-bold">${item.v} V</td>
+                    <td class="p-3 border-b border-slate-800 text-cyan-300">${item.theta}</td>
+                    <td class="p-3 border-b border-slate-800 text-emerald-300 font-bold">${item.v1} V</td>
+                    <td class="p-3 border-b border-slate-800 text-amber-300">${item.error} V</td>
+                </tr>
+            `).join("");
+        }
+
+        function clearTable() {
+            observations = [];
+            renderTable();
+            showToast("सारणी के सभी पाठ्यांक हटा दिए गए", "info");
+        }
+
+        function downloadCSV() {
+            if (observations.length === 0) {
+                showToast("डाउनलोड करने के लिए कोई पाठ्यांक नहीं है!", "error");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,S.No,Standard Voltmeter V (Volt),Galvanometer Deflection Theta (Div),Converted Voltmeter V1 (Volt),Error (Volt)\n";
+            observations.forEach(r => {
+                csvContent += `${r.sno},${r.v},${r.theta},${r.v1},${r.error}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Galvanometer_to_Voltmeter_Readings.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function resetLab() {
+            if (isKeyOn) toggleKey();
+            document.getElementById("rheostat-slider").value = 0;
+            observations = [];
+            renderTable();
+            updateCircuit();
+            showToast("प्रयोगशाला सिम्युलेटर रिसेट किया गया", "info");
+        }
+
+        function openTableModal() {
+            renderTable();
+            document.getElementById("modal-table").classList.remove("hidden");
+        }
+
+        function closeTableModal() {
+            document.getElementById("modal-table").classList.add("hidden");
+        }
+
+        function showInfo(key) {
+            const data = equipmentData[key];
+            if (!data) return;
+
+            document.getElementById("info-title").innerText = data.name;
+            document.getElementById("info-function").innerText = data.function;
+            document.getElementById("info-role").innerText = data.role;
+            document.getElementById("modal-info").classList.remove("hidden");
+        }
+
+        function closeInfoModal() {
+            document.getElementById("modal-info").classList.add("hidden");
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+
+            let bgColor = "bg-slate-800 border-slate-700 text-slate-200";
+            let icon = "fa-circle-info text-cyan-400";
+
+            if (type === "success") {
+                bgColor = "bg-emerald-950/90 border-emerald-600 text-emerald-200";
+                icon = "fa-circle-check text-emerald-400";
+            } else if (type === "error") {
+                bgColor = "bg-rose-950/90 border-rose-600 text-rose-200";
+                icon = "fa-circle-exclamation text-rose-400";
+            }
+
+            toast.className = `px-4 py-3 rounded-xl border shadow-xl flex items-center space-x-3 text-xs font-semibold backdrop-blur-md transition transform translate-y-2 ${bgColor}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "translate-y-[-10px]");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
