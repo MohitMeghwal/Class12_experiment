@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="hi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>गैलवेनोमीटर का रूपांतरण (Voltmeter & Ammeter Lab)</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome v6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans Devanagari"', 'sans-serif'],
+          },
+          colors: {
+            darkbg: '#080c14',
+            glass: 'rgba(15, 23, 42, 0.85)',
+            glassBorder: 'rgba(51, 65, 85, 0.6)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Three.js (r128) & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      background-color: #080c14;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+
+    .glass-panel-glow {
+      box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.2);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      background: transparent;
+    }
+    input[type=range]:focus {
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 8px;
+      cursor: pointer;
+      background: #1e293b;
+      border-radius: 4px;
+      border: 1px solid #475569;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      height: 20px;
+      width: 20px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -6px;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+      border: 2px solid #ffffff;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between select-none">
+
+  <!-- ==================== HEADER BAR ==================== -->
+  <header class="glass-panel sticky top-0 z-40 border-b border-slate-800 px-4 py-3 shadow-lg">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+      
+      <div class="flex items-center gap-3 text-center md:text-left">
+        <div class="bg-blue-600/20 p-2.5 rounded-xl border border-blue-500/30 text-blue-400">
+          <i class="fa-solid fa-microchip text-2xl"></i>
+        </div>
+        <div>
+          <h1 id="experiment-title" class="text-xl md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-400">
+            गैलवेनोमीटर को वोल्टमीटर में बदलना
+          </h1>
+          <p class="text-xs text-slate-400">Realistic 3D Virtual Physics Laboratory</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- MODE TOGGLE BUTTON -->
+        <button id="btn-mode-toggle" onclick="toggleExperimentMode()" class="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all duration-300 shadow-md bg-purple-600/20 text-purple-300 border border-purple-500/50 hover:bg-purple-600/40">
+          <i class="fa-solid fa-arrows-rotate text-purple-400"></i>
+          <span id="mode-btn-text">मोड: वोल्टमीटर ➔ ऐमीटर</span>
+        </button>
+
+        <button id="btn-toggle-key" onclick="togglePowerKey()" class="px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all duration-300 shadow-md bg-red-600/20 text-red-400 border border-red-500/50 hover:bg-red-600/30">
+          <span id="key-led" class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span id="key-btn-text">कुंजी: बंद [OFF]</span>
+        </button>
+
+        <button onclick="resetExperiment()" class="px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all flex items-center gap-1.5 shadow-md">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>रीसेट</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT GRID ==================== -->
+  <main class="max-w-7xl mx-auto w-full p-4 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- LEFT COLUMN: 3D VIEWPORT & CONTROLS (7 Cols) -->
+    <section class="lg:col-span-7 flex flex-col gap-3">
+      
+      <div class="relative w-full h-[480px] lg:h-[560px] rounded-2xl overflow-hidden glass-panel glass-panel-glow border border-slate-800">
+        
+        <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+        <div class="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md border border-slate-700/80 text-slate-300 text-xs px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2 shadow-lg">
+          <i class="fa-solid fa-hand-pointer text-amber-400"></i>
+          <span>उपकरणों पर टैप करें | 3D दृश्य घुमाएँ</span>
+        </div>
+
+        <!-- Dynamic Floating Badges over 3D Meters -->
+        <div id="hud-g" class="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full transition-all duration-75 hidden">
+          <div class="bg-slate-950/90 text-amber-400 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-amber-500/50 shadow-2xl flex items-center gap-1.5 backdrop-blur-md">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>G: <span id="hud-g-val" class="text-white text-sm">0</span> Div</span>
+          </div>
+        </div>
+
+        <div id="hud-v" class="absolute pointer-events-none transform -translate-x-1/2 -translate-y-full transition-all duration-75 hidden">
+          <div class="bg-slate-950/90 text-blue-400 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-blue-500/50 shadow-2xl flex items-center gap-1.5 backdrop-blur-md">
+            <i class="fa-solid fa-bolt"></i>
+            <span><span id="hud-meter-label">V</span>: <span id="hud-v-val" class="text-white text-sm">0.00</span> <span id="hud-unit">V</span></span>
+          </div>
+        </div>
+
+        <!-- Rheostat Slider Control Bar -->
+        <div class="absolute bottom-3 left-3 right-3 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-3 rounded-xl shadow-2xl flex flex-col md:flex-row items-center gap-3">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-300 whitespace-nowrap min-w-[170px]">
+            <i class="fa-solid fa-sliders text-cyan-400"></i>
+            <span>धारा नियंत्रक (Rheostat):</span>
+            <span id="rheostat-val-display" class="text-cyan-400 text-sm">50%</span>
+          </div>
+
+          <div class="flex items-center gap-2 w-full">
+            <button onclick="adjustRheostat(-1)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-600 rounded-lg text-xs font-bold transition">
+              -1
+            </button>
+            <input type="range" id="rheostat-slider" min="0" max="30" value="15" oninput="onRheostatChange(this.value)" class="w-full">
+            <button onclick="adjustRheostat(1)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-600 rounded-lg text-xs font-bold transition">
+              +1
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: CALCULATIONS, READINGS & SCHEMATIC (5 Cols) -->
+    <section class="lg:col-span-5 flex flex-col gap-4">
+      
+      <!-- CALCULATIONS & FORMULA ENGINE SECTION -->
+      <div class="glass-panel p-4 rounded-2xl flex flex-col gap-2.5 border border-amber-500/30">
+        <h2 id="calc-engine-heading" class="text-xs font-extrabold text-amber-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+          <i class="fa-solid fa-calculator text-amber-400"></i>
+          <span>Calculations & Formula Engine (Voltmeter)</span>
+        </h2>
+
+        <!-- DYNAMIC VOLTMETER/AMMETER ENGINE DISPLAY -->
+        <div id="calc-engine-box" class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+          <!-- Populated via Javascript -->
+        </div>
+      </div>
+
+      <!-- Live Readings -->
+      <div class="glass-panel p-4 rounded-2xl flex flex-col gap-3">
+        <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+          <i class="fa-solid fa-chart-line text-blue-400"></i>
+          <span>डिजिटल पाठ्यांक (Live Digital Readings)</span>
+        </h2>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col items-center text-center">
+            <span id="lbl-read-v" class="text-[10px] text-slate-400 font-semibold mb-1">मानक वोल्टमीटर (V)</span>
+            <span id="read-v" class="text-lg font-extrabold text-blue-400">0.00 <span class="text-xs">V</span></span>
+          </div>
+
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col items-center text-center">
+            <span class="text-[10px] text-slate-400 font-semibold mb-1">गैलवेनोमीटर (θ)</span>
+            <span id="read-theta" class="text-lg font-extrabold text-amber-400">0 <span class="text-xs">खाने</span></span>
+          </div>
+
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col items-center text-center">
+            <span id="lbl-read-v1" class="text-[10px] text-slate-400 font-semibold mb-1">रूपांतरित वोल्टमीटर (V₁)</span>
+            <span id="read-v1" class="text-lg font-extrabold text-emerald-400">0.00 <span class="text-xs">V</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Circuit Status & Diagram -->
+      <div class="glass-panel p-4 rounded-2xl flex flex-col gap-2">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+          <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-network-wired text-cyan-400"></i>
+            <span>परिपथ आरेख (Circuit Diagram)</span>
+          </h2>
+          <span id="circuit-status" class="text-[11px] px-2 py-0.5 rounded font-bold bg-red-950 text-red-400 border border-red-800">
+            परिपथ खुला (OFF)
+          </span>
+        </div>
+
+        <div class="w-full h-40 bg-slate-950/80 rounded-xl border border-slate-800 p-2 flex items-center justify-center">
+          <svg viewBox="0 0 420 220" class="w-full h-full">
+            <path id="svg-wire-main" d="M 40,30 L 380,30 L 380,85 M 40,30 L 40,150" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+            
+            <g transform="translate(100, 30)">
+              <line x1="-20" y1="0" x2="-8" y2="0" stroke="#f8fafc" stroke-width="2"/>
+              <line x1="-8" y1="-12" x2="-8" y2="12" stroke="#ef4444" stroke-width="3"/>
+              <line x1="-2" y1="-6" x2="-2" y2="6" stroke="#38bdf8" stroke-width="2"/>
+              <line x1="4" y1="-12" x2="4" y2="12" stroke="#ef4444" stroke-width="3"/>
+              <line x1="10" y1="-6" x2="10" y2="6" stroke="#38bdf8" stroke-width="2"/>
+              <line x1="10" y1="0" x2="20" y2="0" stroke="#f8fafc" stroke-width="2"/>
+              <text x="-12" y="-16" fill="#ef4444" font-size="11" font-weight="bold">+</text>
+              <text x="10" y="-16" fill="#38bdf8" font-size="11" font-weight="bold">-</text>
+              <text x="0" y="24" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">Battery (E)</text>
+            </g>
+
+            <g transform="translate(230, 30)">
+              <circle cx="-12" cy="0" r="3" fill="#cbd5e1"/>
+              <circle cx="12" cy="0" r="3" fill="#cbd5e1"/>
+              <line id="svg-key-lever" x1="-12" y1="0" x2="10" y2="-12" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+              <text x="0" y="24" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">Key (K)</text>
+            </g>
+
+            <g transform="translate(280, 85)">
+              <path d="M 0,0 L 15,0 L 22.5,-8 L 37.5,8 L 52.5,-8 L 67.5,8 L 82.5,-8 L 90,0 L 100,0" fill="none" stroke="#f59e0b" stroke-width="2.5"/>
+              <path id="svg-rheo-arrow" d="M 50,25 L 50,0 L 45,-6 M 50,0 L 55,-6" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+              <line x1="50" y1="25" x2="50" y2="40" stroke="#38bdf8" stroke-width="2"/>
+              <text x="50" y="-14" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">Rheostat</text>
+            </g>
+
+            <path d="M 40,90 L 180,90 M 220,90 L 330,90 L 330,125" fill="none" stroke="#475569" stroke-width="2.5"/>
+            <g transform="translate(200, 90)">
+              <circle cx="0" cy="0" r="16" fill="#0f172a" stroke="#3b82f6" stroke-width="2"/>
+              <text id="svg-meter-type" x="0" y="5" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">V</text>
+              <text x="-24" y="-4" fill="#ef4444" font-size="10" font-weight="bold">+</text>
+              <text x="20" y="-4" fill="#38bdf8" font-size="10" font-weight="bold">-</text>
+              <text id="svg-meter-lbl" x="0" y="-20" fill="#cbd5e1" font-size="11" font-weight="bold" text-anchor="middle">Standard Voltmeter (V)</text>
+            </g>
+
+            <rect x="70" y="125" width="230" height="75" fill="rgba(239, 68, 68, 0.05)" stroke="#ef4444" stroke-width="1.8" stroke-dasharray="5,4" rx="6"/>
+            <text id="svg-converted-lbl" x="185" y="192" fill="#fca5a5" font-size="11" font-weight="bold" text-anchor="middle">Converted Voltmeter</text>
+
+            <path d="M 40,150 L 110,150 M 140,150 L 190,150 M 240,150 L 330,150" fill="none" stroke="#475569" stroke-width="2.5"/>
+            
+            <g transform="translate(125, 150)">
+              <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+              <text x="0" y="4" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">G</text>
+              <text x="0" y="24" fill="#94a3b8" font-size="9" text-anchor="middle">Galvanometer</text>
+            </g>
+
+            <g transform="translate(215, 150)">
+              <rect x="-22" y="-12" width="44" height="24" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" rx="3"/>
+              <text id="svg-res-box-lbl" x="0" y="3" fill="#fbbf24" font-size="10" font-weight="bold" text-anchor="middle">R.B.</text>
+              <text id="svg-res-sub-lbl" x="0" y="24" fill="#94a3b8" font-size="9" text-anchor="middle">High Resistance (Series)</text>
+            </g>
+
+            <circle cx="330" cy="125" r="3.5" fill="#38bdf8"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="recordObservation()" class="py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-bold rounded-xl shadow-lg border border-blue-400/30 flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-plus-circle"></i>
+          <span>पाठ्यांक दर्ज करें</span>
+        </button>
+
+        <button onclick="openTableModal()" class="py-3 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 font-bold rounded-xl shadow-lg border border-slate-700 flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-table"></i>
+          <span>सारणी देखें</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== TOOL INFO POPUP MODAL ==================== -->
+  <div id="tool-info-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
+        <div class="flex items-center gap-2.5">
+          <i id="tool-icon" class="fa-solid fa-circle-info text-xl text-blue-400"></i>
+          <h3 id="tool-title" class="text-base font-bold text-white">उपकरण जानकारी</h3>
+        </div>
+        <button onclick="closeToolModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-5 flex flex-col gap-3 text-sm text-slate-300">
+        <p id="tool-desc" class="leading-relaxed">उपकरण विवरण यहाँ दिखेगा।</p>
+        <div id="tool-specs" class="bg-slate-900/90 border border-slate-800 p-3 rounded-xl text-xs text-blue-300 flex flex-col gap-1">
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-900/60 flex justify-end">
+        <button onclick="closeToolModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition">
+          ठीक है (OK)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== OBSERVATION TABLE MODAL ==================== -->
+  <div id="table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel w-full max-w-3xl rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+      
+      <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-clipboard-list text-xl text-blue-400"></i>
+          <h3 class="text-lg font-bold text-white">प्रेक्षण सारणी (Observation Table)</h3>
+        </div>
+        <button onclick="closeTableModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-grow">
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-sm text-left text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="px-4 py-3 text-center">क्र.सं.</th>
+                <th id="th-std" class="px-4 py-3 text-center">मानक वोल्टमीटर (V) Volts</th>
+                <th class="px-4 py-3 text-center">गैलवेनोमीटर विक्षेप (θ) Div</th>
+                <th id="th-conv" class="px-4 py-3 text-center">रूपांतरित वोल्टमीटर (V₁) Volts</th>
+                <th class="px-4 py-3 text-center">त्रुटि</th>
+              </tr>
+            </thead>
+            <tbody id="observation-table-body" class="divide-y divide-slate-800/60">
+            </tbody>
+          </table>
+        </div>
+        <p id="empty-table-msg" class="text-center text-slate-500 text-sm py-8">कोई पाठ्यांक दर्ज नहीं किया गया है। "पाठ्यांक दर्ज करें" बटन दबाएँ।</p>
+      </div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-900/60 flex justify-between items-center">
+        <button onclick="clearObservations()" class="px-4 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/60 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-trash-can"></i>
+          <span>सारणी साफ़ करें</span>
+        </button>
+        <button onclick="closeTableModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">
+          बंद करें
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-2xl border border-emerald-400 flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toast-msg">पाठ्यांक दर्ज किया गया!</span>
+  </div>
+
+  <!-- ==================== JAVASCRIPT SIMULATION LOGIC ==================== -->
+  <script>
+    /* Global State */
+    const state = {
+      mode: 'voltmeter', // 'voltmeter' OR 'ammeter'
+      keyOn: false,
+      rheostatVal: 15, // 0 to 30 steps
+      
+      // Voltmeter Params
+      vMax: 3.0,
+      vLeastCount: 0.1,
+      
+      // Ammeter Params
+      iMax: 3.0,
+      iLeastCount: 0.1,
+      shuntS: 0.02, // 0.02 Ohm shunt resistance in parallel
+
+      vStd: 0.0,
+      theta: 0,
+      v1: 0.0,
+      observations: []
+    };
+
+    /* Three.js Variables */
+    let scene, camera, renderer, controls;
+    let needleG, needleV;
+    let keyPlugMesh, batteryLedMesh, rheostatWiperMesh;
+    let galvanoMeterObj, voltmeterObj;
+
+    const interactiveObjects = [];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    let targetNeedleRotG = 0;
+    let targetNeedleRotV = 0;
+    let targetPlugY = 0.35;
+    let targetWiperX = 0;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      init3D();
+      renderFormulaEngine();
+      updatePhysics();
+      animate();
+    });
+
+    /* Render Formula Engine Dynamically Based on Mode */
+    function renderFormulaEngine() {
+      const box = document.getElementById('calc-engine-box');
+      const heading = document.getElementById('calc-engine-heading');
+
+      if (state.mode === 'voltmeter') {
+        heading.innerHTML = `<i class="fa-solid fa-calculator text-amber-400"></i><span>Calculations & Formula Engine (Voltmeter)</span>`;
+        box.innerHTML = `
+          <div class="flex justify-between"><span>Galvanometer Resistance (G):</span> <strong class="text-amber-300">100 Ω</strong></div>
+          <div class="flex justify-between"><span>Figure of Merit (k):</span> <strong class="text-slate-200">20 µA/div</strong></div>
+          <div class="flex justify-between"><span>Total Divisions (n):</span> <strong class="text-slate-200">30</strong></div>
+          <div class="flex justify-between"><span>Full Scale Current (Ig):</span> <strong class="text-cyan-300">n × k = 600 µA = 0.0006 A</strong></div>
+          <div class="flex justify-between border-t border-slate-800/80 pt-1"><span>Series Resistance (R):</span> <strong class="text-emerald-400">(V / Ig) - G = (3 / 0.0006) - 100 = 4900 Ω</strong></div>
+          <div class="flex justify-between"><span>Least Count (LC):</span> <strong class="text-blue-400">V / n = 3 / 30 = 0.1 V/div</strong></div>
+          <div class="flex justify-between border-t border-slate-800/80 pt-1"><span>Converted Voltmeter Reading (V1):</span> <strong class="text-emerald-300">Deflection (θ) × LC</strong></div>
+          <div class="flex justify-between"><span>Standard Voltmeter Reading (V):</span> <strong class="text-blue-300">V1 (Error = V - V1 = 0.0 V)</strong></div>
+        `;
+      } else {
+        heading.innerHTML = `<i class="fa-solid fa-calculator text-purple-400"></i><span>Calculations & Formula Engine (Ammeter Addition)</span>`;
+        box.innerHTML = `
+          <div class="flex justify-between"><span>Galvanometer Resistance (G):</span> <strong class="text-amber-300">100 Ω</strong></div>
+          <div class="flex justify-between"><span>Full Scale Current (Ig):</span> <strong class="text-cyan-300">600 µA = 0.0006 A</strong></div>
+          <div class="flex justify-between"><span>Desired Ammeter Range (I):</span> <strong class="text-purple-300">0 - 3.0 Ampere</strong></div>
+          <div class="flex justify-between border-t border-slate-800/80 pt-1"><span>Shunt Resistance in Parallel (S):</span> <strong class="text-emerald-400">S = (Ig × G) / (I - Ig) ≈ 0.02 Ω</strong></div>
+          <div class="flex justify-between"><span>Least Count (LC_A):</span> <strong class="text-blue-400">I / n = 3 / 30 = 0.1 A/div</strong></div>
+          <div class="flex justify-between border-t border-slate-800/80 pt-1"><span>Converted Ammeter Reading (I1):</span> <strong class="text-emerald-300">Deflection (θ) × LC_A</strong></div>
+          <div class="flex justify-between"><span>Standard Ammeter Reading (I):</span> <strong class="text-purple-300">I1 (Error = I - I1 = 0.0 A)</strong></div>
+        `;
+      }
+    }
+
+    /* TOGGLE EXPERIMENT MODE FUNCTION */
+    function toggleExperimentMode() {
+      state.mode = state.mode === 'voltmeter' ? 'ammeter' : 'voltmeter';
+      state.observations = []; // Reset table for new mode
+
+      const btnText = document.getElementById('mode-btn-text');
+      const title = document.getElementById('experiment-title');
+      const hudLabel = document.getElementById('hud-meter-label');
+      const hudUnit = document.getElementById('hud-unit');
+      
+      const lblReadV = document.getElementById('lbl-read-v');
+      const lblReadV1 = document.getElementById('lbl-read-v1');
+
+      const svgMeterType = document.getElementById('svg-meter-type');
+      const svgMeterLbl = document.getElementById('svg-meter-lbl');
+      const svgConvLbl = document.getElementById('svg-converted-lbl');
+      const svgResBoxLbl = document.getElementById('svg-res-box-lbl');
+      const svgResSubLbl = document.getElementById('svg-res-sub-lbl');
+
+      const thStd = document.getElementById('th-std');
+      const thConv = document.getElementById('th-conv');
+
+      if (state.mode === 'ammeter') {
+        btnText.innerText = 'मोड: ऐमीटर ➔ वोल्टमीटर';
+        title.innerText = 'गैलवेनोमीटर को ऐमीटर में बदलना (Shunt Simulation)';
+        hudLabel.innerText = 'A';
+        hudUnit.innerText = 'A';
+
+        lblReadV.innerText = 'मानक ऐमीटर (I)';
+        lblReadV1.innerText = 'रूपांतरित ऐमीटर (I₁)';
+
+        svgMeterType.textContent = 'A';
+        svgMeterLbl.textContent = 'Standard Ammeter (A)';
+        svgConvLbl.textContent = 'Converted Ammeter';
+        svgResBoxLbl.textContent = 'Shunt (S)';
+        svgResSubLbl.textContent = 'Low Resistance (Parallel)';
+
+        thStd.innerText = 'मानक ऐमीटर (I) Amperes';
+        thConv.innerText = 'रूपांतरित ऐमीटर (I₁) Amperes';
+
+        showToast('ऐमीटर मोड (Shunt S = 0.02 Ω) में बदला गया!');
+      } else {
+        btnText.innerText = 'मोड: वोल्टमीटर ➔ ऐमीटर';
+        title.innerText = 'गैलवेनोमीटर को वोल्टमीटर में बदलना';
+        hudLabel.innerText = 'V';
+        hudUnit.innerText = 'V';
+
+        lblReadV.innerText = 'मानक वोल्टमीटर (V)';
+        lblReadV1.innerText = 'रूपांतरित वोल्टमीटर (V₁)';
+
+        svgMeterType.textContent = 'V';
+        svgMeterLbl.textContent = 'Standard Voltmeter (V)';
+        svgConvLbl.textContent = 'Converted Voltmeter';
+        svgResBoxLbl.textContent = 'R.B.';
+        svgResSubLbl.textContent = 'High Resistance (Series)';
+
+        thStd.innerText = 'मानक वोल्टमीटर (V) Volts';
+        thConv.innerText = 'रूपांतरित वोल्टमीटर (V₁) Volts';
+
+        showToast('वोल्टमीटर मोड (Series R = 4900 Ω) में बदला गया!');
+      }
+
+      // Re-create meter texture with updated mode (V or A)
+      if (voltmeterObj) {
+        voltmeterObj.dialMesh.material.map = createMeterDialTexture(state.mode === 'voltmeter' ? 'V' : 'A');
+        voltmeterObj.dialMesh.material.needsUpdate = true;
+      }
+
+      renderFormulaEngine();
+      updatePhysics();
+    }
+
+    /* ==================== 3D SCENE SETUP ==================== */
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x080c14);
+
+      const isMobile = window.innerWidth < 768;
+      camera = new THREE.PerspectiveCamera(isMobile ? 48 : 38, width / height, 0.1, 100);
+      
+      if (isMobile) {
+        camera.position.set(0, 9.2, 13.5);
+      } else {
+        camera.position.set(0, 7.2, 10.5);
+      }
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 - 0.05;
+      controls.minDistance = 5;
+      controls.maxDistance = 18;
+      controls.target.set(0, 0, 0);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+      dirLight.position.set(6, 12, 6);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
+      scene.add(dirLight);
+
+      const spotLight = new THREE.SpotLight(0x38bdf8, 0.7);
+      spotLight.position.set(-5, 8, 5);
+      scene.add(spotLight);
+
+      // Laboratory Wooden Table
+      createLabTable();
+
+      // Ultra-Realistic Instruments Construction
+      createBatteryEliminator();
+      createOneWayKey();
+      createRheostat();
+      createResistanceBox();
+      
+      galvanoMeterObj = createMeter('G');
+      galvanoMeterObj.group.position.set(3.2, 0.2, 1.2);
+      scene.add(galvanoMeterObj.group);
+      needleG = galvanoMeterObj.needle;
+
+      voltmeterObj = createMeter('V');
+      voltmeterObj.group.position.set(3.2, 0.2, -1.2);
+      scene.add(voltmeterObj.group);
+      needleV = voltmeterObj.needle;
+
+      // Connecting Wires
+      createConnectingWires();
+
+      renderer.domElement.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    /* ==================== REALISTIC METER DIAL TEXTURE ==================== */
+    function createMeterDialTexture(type) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 14;
+      ctx.strokeRect(8, 8, 496, 496);
+
+      const centerX = 256;
+      const centerY = 350;
+      const radius = 210;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 26px "Noto Sans Devanagari", sans-serif';
+      ctx.textAlign = 'center';
+
+      if (type === 'G') {
+        ctx.fillText('GALVANOMETER', centerX, 65);
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('DC MOVING COIL - 30-0-30', centerX, 90);
+      } else if (type === 'A') {
+        ctx.fillText('AMMETER', centerX, 65);
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('DC MOVING COIL - 0-3.0 A', centerX, 90);
+      } else {
+        ctx.fillText('VOLTMETER', centerX, 65);
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('DC MOVING COIL - 0-3.0 V', centerX, 90);
+      }
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, Math.PI * 1.25, Math.PI * 1.75);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 4.5;
+      ctx.stroke();
+
+      const totalTicks = 30;
+      const majorStep = 5;
+
+      for (let i = 0; i <= totalTicks; i++) {
+        const frac = i / totalTicks;
+        const angle = (Math.PI * 1.25) + frac * (Math.PI * 0.5);
+        const isMajor = i % majorStep === 0;
+
+        const innerR = isMajor ? radius - 32 : radius - 16;
+        const outerR = radius;
+
+        const x1 = centerX + innerR * Math.cos(angle);
+        const y1 = centerY + innerR * Math.sin(angle);
+        const x2 = centerX + outerR * Math.cos(angle);
+        const y2 = centerY + outerR * Math.sin(angle);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = isMajor ? '#000000' : '#475569';
+        ctx.lineWidth = isMajor ? 3.8 : 2;
+        ctx.stroke();
+
+        if (isMajor) {
+          const textR = radius - 55;
+          const tx = centerX + textR * Math.cos(angle);
+          const ty = centerY + textR * Math.sin(angle);
+
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 22px "Noto Sans Devanagari", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          let valStr = type === 'G' ? `${i}` : (i * 0.1).toFixed(1);
+          ctx.fillText(valStr, tx, ty);
+        }
+      }
+
+      ctx.fillStyle = type === 'G' ? '#d97706' : (type === 'A' ? '#9333ea' : '#2563eb');
+      ctx.font = 'extrabold 76px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(type, centerX, centerY - 80);
+
+      ctx.fillStyle = '#475569';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(
+        type === 'G' ? 'Rg = 100 Ω | k = 20 µA/div' : (type === 'A' ? 'DC Ammeter | Range 0-3A (Shunt S=0.02Ω)' : 'DC Voltmeter | Range 0-3V'),
+        centerX,
+        centerY + 35
+      );
+
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    // Wooden Table
+    function createLabTable() {
+      const topGeom = new THREE.BoxGeometry(12, 0.4, 7.2);
+      const topMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.4, metalness: 0.1 });
+      const topMesh = new THREE.Mesh(topGeom, topMat);
+      topMesh.position.y = -0.2;
+      topMesh.receiveShadow = true;
+      scene.add(topMesh);
+    }
+
+    // Real-Life Meter
+    function createMeter(type) {
+      const group = new THREE.Group();
+
+      const casingMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.2 });
+      const casing = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.5, 2.1), casingMat);
+      casing.castShadow = true;
+      casing.receiveShadow = true;
+      group.add(casing);
+
+      const basePlate = new THREE.Mesh(
+        new THREE.BoxGeometry(2.15, 0.12, 2.15),
+        new THREE.MeshStandardMaterial({ color: type === 'G' ? 0xd97706 : 0x0284c7, roughness: 0.4 })
+      );
+      basePlate.position.y = -0.22;
+      group.add(basePlate);
+
+      const faceGroup = new THREE.Group();
+      faceGroup.position.set(0, 0.35, 0);
+      faceGroup.rotation.x = -Math.PI / 5.5;
+
+      const dial = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.85, 1.85),
+        new THREE.MeshBasicMaterial({ map: createMeterDialTexture(type) })
+      );
+      faceGroup.add(dial);
+
+      const glass = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.85, 1.85),
+        new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, roughness: 0.02, transmission: 0.95 })
+      );
+      glass.position.z = 0.04;
+      faceGroup.add(glass);
+
+      const needlePivot = new THREE.Group();
+      needlePivot.position.set(0, -0.42, 0.02);
+
+      const needleMesh = new THREE.Mesh(
+        new THREE.ConeGeometry(0.022, 1.05, 16).translate(0, 0.52, 0),
+        new THREE.MeshBasicMaterial({ color: 0xdc2626 })
+      );
+      needlePivot.add(needleMesh);
+
+      const pin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07, 0.07, 0.05, 16).rotateX(Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a })
+      );
+      pin.position.z = 0.02;
+      needlePivot.add(pin);
+
+      faceGroup.add(needlePivot);
+      group.add(faceGroup);
+
+      // Binding Post Terminals
+      const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+      const redCapMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 });
+      const blackCapMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
+
+      const tRedBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.18, 16), brassMat);
+      tRedBase.position.set(-0.65, 0.32, 0.65);
+      const tRedCap = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 16), redCapMat);
+      tRedCap.position.set(-0.65, 0.44, 0.65);
+      group.add(tRedBase); group.add(tRedCap);
+
+      const tBlackBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.18, 16), brassMat);
+      tBlackBase.position.set(0.65, 0.32, 0.65);
+      const tBlackCap = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 16), blackCapMat);
+      tBlackCap.position.set(0.65, 0.44, 0.65);
+      group.add(tBlackBase); group.add(tBlackCap);
+
+      casing.userData = {
+        name: type === 'G' ? 'गैलवेनोमीटर (Galvanometer)' : 'मापक मीटर (Voltmeter / Ammeter)',
+        icon: 'fa-gauge-high',
+        desc: type === 'G' 
+          ? 'यह एक अति-संवेदनशील धारा मापी उपकरण है।'
+          : 'यह चयनित मोड के अनुसार वोल्टेज (Voltmeter) या धारा (Ammeter) मापता है।',
+        specs: type === 'G'
+          ? '<b>G:</b> 100 Ω<br><b>k:</b> 20 µA/div<br><b>n:</b> 30 Div'
+          : '<b>परास:</b> 0.0 - 3.0 Units<br><b>अल्पतमांक:</b> 0.1 Unit/div'
+      };
+      interactiveObjects.push(casing);
+
+      return { group, needle: needlePivot, dialMesh: dial };
+    }
+
+    // Battery Eliminator
+    function createBatteryEliminator() {
+      const group = new THREE.Group();
+      group.position.set(-3.8, 0.45, -1.2);
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(2.2, 1.3, 1.7),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.4 })
+      );
+      box.castShadow = true;
+      group.add(box);
+
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.9, 1.05),
+        new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.3 })
+      );
+      panel.position.set(0, 0, 0.86);
+      group.add(panel);
+
+      const knob = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, 0.15, 32).rotateX(Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2 })
+      );
+      knob.position.set(0, -0.05, 0.94);
+      group.add(knob);
+
+      batteryLedMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.8 })
+      );
+      batteryLedMesh.position.set(-0.65, 0.25, 0.9);
+      group.add(batteryLedMesh);
+
+      box.userData = {
+        name: 'बैटरी एलिमिनेटर (Battery Eliminator)',
+        icon: 'fa-car-battery',
+        desc: 'प्रयोगशाला में स्थिर 3.0 V DC आपूर्ति हेतु प्रयुक्त पावर सोर्स।',
+        specs: '<b>आउटपुट:</b> 3.0 V DC'
+      };
+      interactiveObjects.push(box);
+
+      scene.add(group);
+    }
+
+    // One-Way Key
+    function createOneWayKey() {
+      const group = new THREE.Group();
+      group.position.set(-3.8, 0.15, 1.2);
+
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.22, 1.1),
+        new THREE.MeshStandardMaterial({ color: 0x3f1d0b, roughness: 0.6 })
+      );
+      base.castShadow = true;
+      group.add(base);
+
+      const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+      const b1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.4), brassMat);
+      b1.position.set(-0.28, 0.2, 0);
+      group.add(b1);
+
+      const b2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.28, 0.4), brassMat);
+      b2.position.set(0.28, 0.2, 0);
+      group.add(b2);
+
+      keyPlugMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.11, 0.09, 0.45, 16),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+      );
+      keyPlugMesh.position.set(0, targetPlugY, 0);
+      group.add(keyPlugMesh);
+
+      base.userData = {
+        name: 'एक-मार्ग कुंजी (One-Way Key)',
+        icon: 'fa-toggle-on',
+        desc: 'विद्युत परिपथ को जोड़ने/तोड़ने हेतु स्विच।',
+        specs: '<b>प्रकार:</b> प्लग कुंजी (Brass Switch)'
+      };
+      interactiveObjects.push(base);
+
+      scene.add(group);
+    }
+
+    // Rheostat
+    function createRheostat() {
+      const group = new THREE.Group();
+      group.position.set(-0.4, 0.35, -1.2);
+
+      const core = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.45, 0.45, 2.8, 32).rotateZ(Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.7 })
+      );
+      core.castShadow = true;
+      group.add(core);
+
+      const wireCoil = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.46, 0.46, 2.5, 32).rotateZ(Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.6 })
+      );
+      group.add(wireCoil);
+
+      const metalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9, roughness: 0.2 });
+      const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.9, 1.0), metalMat);
+      leg1.position.set(-1.35, -0.1, 0);
+      group.add(leg1);
+
+      const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.9, 1.0), metalMat);
+      leg2.position.set(1.35, -0.1, 0);
+      group.add(leg2);
+
+      const rod = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 2.9, 16).rotateZ(Math.PI / 2),
+        metalMat
+      );
+      rod.position.y = 0.62;
+      group.add(rod);
+
+      rheostatWiperMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.38, 0.42, 0.42),
+        new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 })
+      );
+      rheostatWiperMesh.position.set(0, 0.62, 0);
+      group.add(rheostatWiperMesh);
+
+      core.userData = {
+        name: 'धारा नियंत्रक (Rheostat)',
+        icon: 'fa-sliders',
+        desc: 'विभवांतर विभाजक (Potential Divider) के रूप में प्रयुक्त वायर-वाउंड प्रतिरोध।',
+        specs: '<b>अधिकतम प्रतिरोध:</b> 100 Ω'
+      };
+      interactiveObjects.push(core);
+
+      scene.add(group);
+    }
+
+    // Resistance Box / Shunt
+    function createResistanceBox() {
+      const group = new THREE.Group();
+      group.position.set(-0.4, 0.25, 1.2);
+
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 0.55, 1.3),
+        new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.5 })
+      );
+      box.castShadow = true;
+      group.add(box);
+
+      const topPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 0.05, 1.2),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 })
+      );
+      topPlate.position.y = 0.28;
+      group.add(topPlate);
+
+      const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.2 });
+      const knobMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.3 });
+
+      for (let z = -0.3; z <= 0.3; z += 0.6) {
+        for (let x = -0.9; x <= 0.9; x += 0.36) {
+          const block = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.22), brassMat);
+          block.position.set(x, 0.34, z);
+          group.add(block);
+
+          const plugKnob = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.25, 16), knobMat);
+          plugKnob.position.set(x + 0.14, 0.45, z);
+          group.add(plugKnob);
+        }
+      }
+
+      box.userData = {
+        name: 'प्रतिरोध बॉक्स / शंट (Resistance Box / Shunt Block)',
+        icon: 'fa-box',
+        desc: 'वोल्टमीटर मोड में उच्च श्रेणीक्रम प्रतिरोध (4900 Ω) तथा ऐमीटर मोड में निम्न अल्प प्रतिरोध / शंट (S ≈ 0.02 Ω) के रूप में कार्य करता है।',
+        specs: '<b>R (Series):</b> 4900 Ω<br><b>S (Shunt):</b> 0.02 Ω'
+      };
+      interactiveObjects.push(box);
+
+      scene.add(group);
+    }
+
+    // Wires
+    function createConnectingWires() {
+      const wireRed = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+      const wireBlue = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.5 });
+
+      makeCurvedTube([new THREE.Vector3(-4.35, 0.4, -0.6), new THREE.Vector3(-4.8, 0.1, 0.2), new THREE.Vector3(-4.1, 0.2, 1.2)], wireRed);
+      makeCurvedTube([new THREE.Vector3(-3.5, 0.2, 1.2), new THREE.Vector3(-2.2, 0.1, 0.0), new THREE.Vector3(-1.75, 0.35, -1.2)], wireBlue);
+      makeCurvedTube([new THREE.Vector3(0.95, 0.85, -1.2), new THREE.Vector3(0.3, 0.1, 0.0), new THREE.Vector3(-1.5, 0.3, 1.2)], wireRed);
+      makeCurvedTube([new THREE.Vector3(0.7, 0.3, 1.2), new THREE.Vector3(1.8, 0.1, 1.5), new THREE.Vector3(2.55, 0.55, 0.55)], wireRed);
+      makeCurvedTube([new THREE.Vector3(3.85, 0.55, 0.55), new THREE.Vector3(4.2, 0.1, 0.0), new THREE.Vector3(3.85, 0.55, -1.85)], wireBlue);
+      makeCurvedTube([new THREE.Vector3(2.55, 0.55, -1.85), new THREE.Vector3(1.5, 0.2, -1.5), new THREE.Vector3(0.95, 0.85, -1.2)], wireRed);
+    }
+
+    function makeCurvedTube(points, material) {
+      const curve = new THREE.CatmullRomCurve3(points);
+      const geom = new THREE.TubeGeometry(curve, 32, 0.032, 8, false);
+      scene.add(new THREE.Mesh(geom, material));
+    }
+
+    /* ==================== PHYSICS & COMPUTATION ==================== */
+    function updatePhysics() {
+      if (state.keyOn) {
+        state.theta = state.rheostatVal;
+        const lc = state.mode === 'voltmeter' ? state.vLeastCount : state.iLeastCount;
+        state.vStd = state.theta * lc;
+        state.v1 = state.theta * lc;
+
+        batteryLedMesh.material.color.setHex(0x22c55e);
+        batteryLedMesh.material.emissive.setHex(0x22c55e);
+        targetPlugY = 0.15;
+      } else {
+        state.vStd = 0.0;
+        state.theta = 0;
+        state.v1 = 0.0;
+
+        batteryLedMesh.material.color.setHex(0xef4444);
+        batteryLedMesh.material.emissive.setHex(0xef4444);
+        targetPlugY = 0.45;
+      }
+
+      const maxSweep = Math.PI * 0.42;
+      const fracG = state.theta / 30.0;
+      targetNeedleRotG = (maxSweep / 2) - (fracG * maxSweep);
+
+      const maxVal = state.mode === 'voltmeter' ? state.vMax : state.iMax;
+      const fracV = state.vStd / maxVal;
+      targetNeedleRotV = (maxSweep / 2) - (fracV * maxSweep);
+
+      targetWiperX = -1.1 + (state.rheostatVal / 30.0) * 2.2;
+
+      updateUI();
+    }
+
+    function updateUI() {
+      const unit = state.mode === 'voltmeter' ? 'V' : 'A';
+      document.getElementById('read-v').innerHTML = `${state.vStd.toFixed(2)} <span class="text-xs">${unit}</span>`;
+      document.getElementById('read-theta').innerHTML = `${state.theta} <span class="text-xs">खाने</span>`;
+      document.getElementById('read-v1').innerHTML = `${state.v1.toFixed(2)} <span class="text-xs">${unit}</span>`;
+
+      document.getElementById('hud-g-val').innerText = state.theta;
+      document.getElementById('hud-v-val').innerText = state.vStd.toFixed(2);
+
+      const percent = Math.round((state.rheostatVal / 30.0) * 100);
+      document.getElementById('rheostat-val-display').innerText = `${percent}%`;
+
+      const statusBadge = document.getElementById('circuit-status');
+      const keyLeverSVG = document.getElementById('svg-key-lever');
+      const wireMainSVG = document.getElementById('svg-wire-main');
+
+      if (state.keyOn) {
+        statusBadge.className = 'text-[11px] px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse';
+        statusBadge.innerText = 'परिपथ चालू (ON)';
+        if (keyLeverSVG) { keyLeverSVG.setAttribute('x2', '12'); keyLeverSVG.setAttribute('y2', '0'); }
+        if (wireMainSVG) { wireMainSVG.setAttribute('stroke', '#38bdf8'); }
+      } else {
+        statusBadge.className = 'text-[11px] px-2 py-0.5 rounded font-bold bg-red-950 text-red-400 border border-red-800';
+        statusBadge.innerText = 'परिपथ खुला (OFF)';
+        if (keyLeverSVG) { keyLeverSVG.setAttribute('x2', '10'); keyLeverSVG.setAttribute('y2', '-12'); }
+        if (wireMainSVG) { wireMainSVG.setAttribute('stroke', '#475569'); }
+      }
+    }
+
+    /* ==================== ANIMATION LOOP ==================== */
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+
+      if (needleG) needleG.rotation.z += (targetNeedleRotG - needleG.rotation.z) * 0.1;
+      if (needleV) needleV.rotation.z += (targetNeedleRotV - needleV.rotation.z) * 0.1;
+      if (keyPlugMesh) keyPlugMesh.position.y += (targetPlugY - keyPlugMesh.position.y) * 0.15;
+      if (rheostatWiperMesh) rheostatWiperMesh.position.x += (targetWiperX - rheostatWiperMesh.position.x) * 0.15;
+
+      updateHUDPositions();
+      renderer.render(scene, camera);
+    }
+
+    function updateHUDPositions() {
+      if (!galvanoMeterObj || !voltmeterObj) return;
+
+      const hudG = document.getElementById('hud-g');
+      const hudV = document.getElementById('hud-v');
+
+      const posG = new THREE.Vector3();
+      galvanoMeterObj.group.getWorldPosition(posG);
+      posG.y += 0.8;
+      posG.project(camera);
+
+      const posV = new THREE.Vector3();
+      voltmeterObj.group.getWorldPosition(posV);
+      posV.y += 0.8;
+      posV.project(camera);
+
+      const container = document.getElementById('canvas-container');
+      const widthHalf = container.clientWidth / 2;
+      const heightHalf = container.clientHeight / 2;
+
+      const xG = (posG.x * widthHalf) + widthHalf;
+      const yG = -(posG.y * heightHalf) + heightHalf;
+
+      const xV = (posV.x * widthHalf) + widthHalf;
+      const yV = -(posV.y * heightHalf) + heightHalf;
+
+      if (posG.z < 1) {
+        hudG.style.left = `${xG}px`;
+        hudG.style.top = `${yG}px`;
+        hudG.classList.remove('hidden');
+      } else {
+        hudG.classList.add('hidden');
+      }
+
+      if (posV.z < 1) {
+        hudV.style.left = `${xV}px`;
+        hudV.style.top = `${yV}px`;
+        hudV.classList.remove('hidden');
+      } else {
+        hudV.classList.add('hidden');
+      }
+    }
+
+    function onPointerDown(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+      if (intersects.length > 0) {
+        let obj = intersects[0].object;
+        while (obj && !obj.userData.name && obj.parent) {
+          obj = obj.parent;
+        }
+        if (obj && obj.userData.name) {
+          openToolModal(obj.userData);
+        }
+      }
+    }
+
+    function openToolModal(data) {
+      document.getElementById('tool-title').innerText = data.name;
+      document.getElementById('tool-icon').className = `fa-solid ${data.icon} text-xl text-blue-400`;
+      document.getElementById('tool-desc').innerText = data.desc;
+      document.getElementById('tool-specs').innerHTML = data.specs;
+      document.getElementById('tool-info-modal').classList.remove('hidden');
+    }
+
+    function closeToolModal() {
+      document.getElementById('tool-info-modal').classList.add('hidden');
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      const isMobile = window.innerWidth < 768;
+      camera.aspect = width / height;
+      camera.fov = isMobile ? 48 : 38;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(width, height);
+    }
+
+    function togglePowerKey() {
+      state.keyOn = !state.keyOn;
+      const btn = document.getElementById('btn-toggle-key');
+      const led = document.getElementById('key-led');
+      const btnText = document.getElementById('key-btn-text');
+
+      if (state.keyOn) {
+        btn.className = 'px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all duration-300 shadow-md bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-600/30';
+        led.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+        btnText.innerText = 'कुंजी: चालू [ON]';
+      } else {
+        btn.className = 'px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all duration-300 shadow-md bg-red-600/20 text-red-400 border border-red-500/50 hover:bg-red-600/30';
+        led.className = 'w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
+        btnText.innerText = 'कुंजी: बंद [OFF]';
+      }
+
+      updatePhysics();
+    }
+
+    function onRheostatChange(val) {
+      state.rheostatVal = parseInt(val);
+      updatePhysics();
+    }
+
+    function adjustRheostat(delta) {
+      let newVal = state.rheostatVal + delta;
+      newVal = Math.max(0, Math.min(30, newVal));
+      state.rheostatVal = newVal;
+      document.getElementById('rheostat-slider').value = newVal;
+      updatePhysics();
+    }
+
+    function resetExperiment() {
+      state.keyOn = false;
+      state.rheostatVal = 15;
+      document.getElementById('rheostat-slider').value = 15;
+
+      const btn = document.getElementById('btn-toggle-key');
+      const led = document.getElementById('key-led');
+      const btnText = document.getElementById('key-btn-text');
+      btn.className = 'px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all duration-300 shadow-md bg-red-600/20 text-red-400 border border-red-500/50 hover:bg-red-600/30';
+      led.className = 'w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse';
+      btnText.innerText = 'कुंजी: बंद [OFF]';
+
+      updatePhysics();
+      showToast('प्रयोग पुनः सेट किया गया');
+    }
+
+    function recordObservation() {
+      if (!state.keyOn) {
+        showToast('कृपया पहले कुंजी चालू (ON) करें!', true);
+        return;
+      }
+
+      const err = (state.v1 - state.vStd).toFixed(2);
+      const entry = {
+        sno: state.observations.length + 1,
+        vStd: state.vStd.toFixed(2),
+        theta: state.theta,
+        v1: state.v1.toFixed(2),
+        error: err >= 0 ? `+${err}` : err
+      };
+
+      state.observations.push(entry);
+      renderObservationTable();
+      showToast(`पाठ्यांक #${entry.sno} दर्ज किया गया!`);
+    }
+
+    function renderObservationTable() {
+      const tbody = document.getElementById('observation-table-body');
+      const emptyMsg = document.getElementById('empty-table-msg');
+
+      if (state.observations.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+      }
+
+      emptyMsg.classList.add('hidden');
+      tbody.innerHTML = state.observations.map(obs => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="px-4 py-2.5 text-center font-bold text-slate-400">${obs.sno}</td>
+          <td class="px-4 py-2.5 text-center font-bold text-blue-400">${obs.vStd}</td>
+          <td class="px-4 py-2.5 text-center font-bold text-amber-400">${obs.theta}</td>
+          <td class="px-4 py-2.5 text-center font-bold text-emerald-400">${obs.v1}</td>
+          <td class="px-4 py-2.5 text-center font-semibold text-slate-300">${obs.error}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearObservations() {
+      state.observations = [];
+      renderObservationTable();
+      showToast('सारणी साफ़ कर दी गई');
+    }
+
+    function openTableModal() {
+      renderObservationTable();
+      document.getElementById('table-modal').classList.remove('hidden');
+    }
+
+    function closeTableModal() {
+      document.getElementById('table-modal').classList.add('hidden');
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+
+      toastMsg.innerText = msg;
+      toast.className = `fixed bottom-5 right-5 font-bold px-4 py-2.5 rounded-xl shadow-2xl border flex items-center gap-2 transform transition-all duration-300 z-50 ${
+        isError ? 'bg-red-600 text-white border-red-400' : 'bg-emerald-600 text-white border-emerald-400'
+      }`;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
+
